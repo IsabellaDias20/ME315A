@@ -1,0 +1,133 @@
+---
+title: "LAB04_IsabellaDias"
+author: "Isabella Ferreira Dias 266903"
+format: pdf
+editor: source
+---
+
+Q1. Carregue os pacotes `readxl` e `tidyverse`.
+```{r}
+library(readxl)
+library(tidyverse)
+```
+
+
+Q2. Crie uma variável chamada fname que contenha o caminho para o arquivo `WDIEXCEL.xlsx`, disponível no seu diretório de dados. Confirme que o R identifica a existência do arquivo utilizando o comando `file.exists`
+```{r}
+fname <- "wdiexcel.xlsx"
+
+file.exists(fname)
+```
+
+Q3. Leia a planilha “Country” e armazene no objeto `countries`.
+```{r}
+countries <- read_excel(fname, sheet = "Country")
+countries
+```
+
+Q4. Mantenha apenas os registros de 5 países (Brasil e outros 4 de sua escolha)
+```{r}
+countries <- countries %>%
+  filter(`Country Code` %in% c(
+    "BRA",
+    "AUS",
+    "CHL",
+    "CAN",
+    "JPN"
+  ))
+
+countries
+```
+
+Q5.  Leia a planilha “Data” e armazene no objeto WDI.
+```{r}
+WDI <- read_excel(fname, sheet = "Data")
+WDI
+```
+
+Q6. Selecione apenas as colunas:
+
+- Country Code
+- Indicator Code
+- E todos os anos de 1960-2018
+```{r}
+WDI <- WDI %>%
+  select(
+    "Country Code",
+    "Indicator Code",
+    "1960":"2018"
+  )
+WDI
+```
+
+Q7.  Confirme se os dados wm WDI estão em formato tidy. Se não estiverem, transforme-os para tal formato. Faça de forma que exista uma coluna referente ao ano chamada YEAR.
+```{r}
+WDI_tidy <- WDI %>%
+  pivot_longer(
+    cols = "1960":"2018",
+    names_to = "YEAR",
+    values_to = "VALUE"
+  )
+WDI_tidy
+```
+
+Q8. Confirme se a coluna referente ao ano está em formato inteiro.
+```{r}
+WDI_tidy <- WDI_tidy %>%
+  mutate(YEAR = as.integer(YEAR))
+
+str(WDI_tidy$YEAR)
+```
+
+Q9. Para o objeto WDI, mantenha apenas os registros dos países listados em countries. Selecione as colunas:
+- Country Code
+- Short Name
+- YEAR
+- SP.DYN.CBRT.IN
+```{r}
+WDI_tidy <- WDI_tidy %>%
+  left_join(
+    countries %>%
+      select(`Country Code`, `Short Name`),
+    by = "Country Code"
+  ) %>%
+  filter(
+    !is.na(`Short Name`),
+    `Indicator Code` == "SP.DYN.CBRT.IN"
+  ) %>%
+  select(
+    `Country Code`,
+    `Short Name`,
+    YEAR,
+    VALUE
+  )
+
+WDI_tidy
+```
+
+Q10.  Ordene o objeto de forma que, para cada país, as informações estejam ordenadas por ano.
+```{r}
+WDI_tidy <- WDI_tidy %>%
+  arrange(`Short Name`, YEAR)
+
+WDI_tidy
+```
+
+Q11.   Construa um gráfico de linhas, usando o pacote ggplot2, que tenha no eixo X a variável YEAR, no eixo Y a variável SP.DYN.CBRT.IN e que cada linha corresponda a um país diferente.
+```{r}
+ggplot(WDI_tidy, aes(x = YEAR, y = VALUE, color = `Short Name`)) +
+  geom_line() +
+  labs(
+    title = "Taxa de natalidade dos países selecionados (1960-2018)",
+    x = "Ano",
+    y = "SP.DYN.CBRT.IN",
+    color = "País"
+  ) +
+  theme_minimal()
+```
+
+# Horário
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
