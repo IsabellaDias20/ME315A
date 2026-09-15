@@ -1,0 +1,172 @@
+---
+title: "LAB05_IsaDias"
+author: "Isabella Ferreira Dias 266903"
+format: pdf
+editor: source
+---
+
+# Carregando os pacotes 
+```{r}
+library(readr)
+library(dplyr)
+library(leaflet)
+library(tidyr)
+```
+
+
+
+Ao longo desta semana, você deverá desenvolver código em R, utilizando-se de tidyverse, ggplot, leaftlet,
+ggcal e outros pacotes disponibilizados em HTML Widgets para responder uma questão relacionada ao
+conjunto de dados flights. Para tanto, considere os seguintes fatos:
+• Cias Aéreas (AIRLINE) possuem diferentes aeronaves (codificadas em TAIL_NUMBER);
+• (Exemplo hipotético) No dia 01/01/2015, a aeronave N431WN viaja de BWI para JFK;
+• (Exemplo hipotético) No dia 02/01/2015, a aeronave N431WN viaja de JFK para ORD‘;
+• E assim sucessivamente. . .
+No caso apontado acima, pode-se ver que a aeronave N431WN realizou um trajeto (provavelmente único)
+durante todo o ano de 2015. Nos dias exemplificados, o trajeto foi BWI-JFK-ORD.
+
+# Parte 1:
+## Crie uma função que:
+a. Receba um valor de TAIL_NUMBER (por exemplo, N431WN);
+b. Produza uma tabela (tidy) com todos os trajetos realizados pela aeronave (ordenadas por data e hora,
+contendo todas as colunas do arquivo flights.csv.zip);
+c. Produza um mapa que apresente todo o trajeto voado pela aeronave ao longo de todo o ano; o trajeto
+deve ser apresentado de maneira linear no tempo (i.e., segue a sequência do tempo, como no exemplo
+hipotético dado acima);
+d. O mapa deve ser decorado com estatísticas do seu interesse (por exemplo, velocidade média do vôo
+como espessura da linha que conecta os aeroportos envolvidos no trajeto);
+
+## Q1. Importar a tabela de aeroportos
+```{r}
+#leitura da tabela de aeroportos
+airports <- read_csv("C:/Users/isabe/OneDrive/Documentos/airports.csv", 
+                     col_select = c("IATA_CODE", "AIRPORT", "CITY", "STATE", "LATITUDE", "LONGITUDE"))
+airports
+```
+
+
+## Q2. Criar a função analisa_aeronave
+```{r}
+# A função recebe o código da aeronave (tail_number) e o arquivo de voos (arquivo).
+analisa_aeronave <- function(tail_number, arquivo){
+
+  # Cria uma tabela vazia para armazenar os voos da aeronave
+  tabela_trajetos <- tibble()
+
+  # Função executada em cada bloco do arquivo
+getStats <- function(input, pos){
+
+  input %>%
+    filter(TAIL_NUMBER == tail_number)
+}
+
+# Callback que devolve uma tabela
+callback <- DataFrameCallback$new(getStats)
+
+# Lê o arquivo em blocos
+tabela_trajetos <- read_csv_chunked(
+  arquivo,
+  callback = callback,
+  chunk_size = 1000000,
+  col_types = cols_only(
+    YEAR = col_integer(),
+    MONTH = col_integer(),
+    DAY = col_integer(),
+    AIRLINE = col_character(),
+    FLIGHT_NUMBER = col_integer(),
+    TAIL_NUMBER = col_character(),
+    ORIGIN_AIRPORT = col_character(),
+    DESTINATION_AIRPORT = col_character(),
+    SCHEDULED_DEPARTURE = col_integer(),
+    ELAPSED_TIME = col_double(),
+    ARRIVAL_DELAY = col_double()
+  )
+)
+
+  # Organiza os voos por data e horário
+  tabela_trajetos <- tabela_trajetos %>%
+    arrange(YEAR, MONTH, DAY, SCHEDULED_DEPARTURE)
+
+  # Adiciona as coordenadas do aeroporto de origem
+  tabela_trajetos <- tabela_trajetos %>%
+    left_join(
+      airports %>%
+        select(IATA_CODE, LATITUDE, LONGITUDE),
+      by = c("ORIGIN_AIRPORT" = "IATA_CODE")
+    ) %>%
+    rename(
+      ORIGIN_LAT = LATITUDE,
+      ORIGIN_LONG = LONGITUDE
+    )
+
+  # Adiciona as coordenadas do aeroporto de destino
+  tabela_trajetos <- tabela_trajetos %>%
+    left_join(
+      airports %>%
+        select(IATA_CODE, LATITUDE, LONGITUDE),
+      by = c("DESTINATION_AIRPORT" = "IATA_CODE")
+    ) %>%
+    rename(
+      DEST_LAT = LATITUDE,
+      DEST_LONG = LONGITUDE
+    )
+
+  # Cria o mapa dos trajetos
+  mapa_trajeto <- leaflet() %>%
+    addTiles()
+
+  for(i in 1:nrow(tabela_trajetos)){
+
+    mapa_trajeto <- mapa_trajeto %>%
+      addPolylines(
+        lng = c(
+          tabela_trajetos$ORIGIN_LONG[i],
+          tabela_trajetos$DEST_LONG[i]
+        ),
+        lat = c(
+          tabela_trajetos$ORIGIN_LAT[i],
+          tabela_trajetos$DEST_LAT[i]
+        ),
+        weight = tabela_trajetos$ELAPSED_TIME[i] / 60,
+        color = "purple",
+        popup = paste(
+          tabela_trajetos$ORIGIN_AIRPORT[i],
+          "→",
+          tabela_trajetos$DESTINATION_AIRPORT[i]
+        )
+      )
+  }
+
+  # Retorna a tabela e o mapa
+  list(
+    tabela = tabela_trajetos,
+    mapa = mapa_trajeto
+  )
+}
+```
+
+# Criando a variável resultado
+```{r}
+resultado <- analisa_aeronave(
+  tail_number = "N431WN",
+  arquivo = "C:/Users/isabe/OneDrive/Documentos/flights.csv"
+)
+```
+
+
+# Resultado da tabela
+```{r}
+resultado$tabela
+```
+
+# Mostrar o Mapa
+```{r, fig.width=-16, fig.height=2, out.width="100%"}
+resultado$mapa
+```
+
+
+## Horário
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
