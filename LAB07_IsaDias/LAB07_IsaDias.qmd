@@ -1,0 +1,226 @@
+---
+title: "LAB07_IsaDias"
+author: "Isabella Ferreira Dias 266903"
+format: pdf
+editor: source
+---
+
+# Atividade 
+
+## 1. Baixe o arquivo uwmadison.sqlite3. Conecte-se a ele usando o pacote RSQLite, armazenando a conexão em uma variável conn.
+```{r}
+library(DBI)
+library(RSQLite)
+
+path <- getwd()
+fname <- file.path(path, "database.sqlite3")
+
+conn <- dbConnect(SQLite(), fname)
+```
+
+## 2. Quem são e quantos são os professores que lecionaram disciplinas cujo tópico era estatística (subjects.abbreviation='STAT');
+```{r}
+sql <- "
+SELECT DISTINCT instructors.name AS PROFESSOR FROM instructors
+INNER JOIN teachings ON instructors.id = teachings.instructor_id
+INNER JOIN sections ON teachings.section_uuid = sections.uuid
+INNER JOIN course_offerings ON sections.course_offering_uuid = course_offerings.uuid
+INNER JOIN subject_memberships ON course_offerings.uuid = subject_memberships.course_offering_uuid
+INNER JOIN subjects ON subject_memberships.subject_code = subjects.code
+WHERE subjects.abbreviation = 'STAT'
+ORDER BY PROFESSOR;
+"
+
+professores_stat <- dbGetQuery(conn, sql)
+
+professores_stat
+```
+
+
+## 3. O GPA americano é definido numa escala de 0 a 4, em que A = 4, AB = 3.5, B = 3, BC = 2.5, C = 2, D = 1 e F = 0. Determinando a nota média de cada oferecimento pela ponderação da quantidade de alunos em cada extrato com os valores numéricos de cada conceito, indique (no que se referente a disciplinas no assunto de estatística):
+
+### Quem é o professor mais difícil?
+```{r}
+sql <- "SELECT instructors.name AS PROFESSOR,
+ROUND(AVG(
+(4.0*gd.a_count +
+3.5*gd.ab_count +
+3.0*gd.b_count +
+2.5*gd.bc_count +
+2.0*gd.c_count +
+1.0*gd.d_count +
+0.0*gd.f_count)*1.0 /
+
+(gd.a_count + gd.ab_count + gd.b_count +
+ gd.bc_count + gd.c_count + gd.d_count + gd.f_count)
+),3) AS GPA_MEDIO
+
+FROM grade_distributions gd
+
+INNER JOIN course_offerings co ON gd.course_offering_uuid = co.uuid
+INNER JOIN sections s ON co.uuid = s.course_offering_uuid
+
+INNER JOIN teachings t ON s.uuid = t.section_uuid
+
+INNER JOIN instructors ON t.instructor_id = instructors.id
+
+INNER JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+
+INNER JOIN subjects ON sm.subject_code = subjects.code
+
+WHERE subjects.abbreviation = 'STAT'
+
+GROUP BY instructors.id, instructors.name
+
+HAVING GPA_MEDIO IS NOT NULL
+
+ORDER BY GPA_MEDIO ASC
+
+LIMIT 1
+"
+
+dbGetQuery(conn, sql)
+```
+
+
+### Quem é o professor mais fácil?
+```{r}
+sql <- "SELECT instructors.name AS PROFESSOR,
+
+ROUND(AVG(
+(4.0*gd.a_count +
+3.5*gd.ab_count +
+3.0*gd.b_count +
+2.5*gd.bc_count +
+2.0*gd.c_count +
+1.0*gd.d_count +
+0.0*gd.f_count)*1.0 /
+
+(gd.a_count + gd.ab_count + gd.b_count +
+ gd.bc_count + gd.c_count + gd.d_count + gd.f_count)
+),3) AS GPA_MEDIO
+
+FROM grade_distributions gd
+
+INNER JOIN course_offerings co ON gd.course_offering_uuid = co.uuid
+
+INNER JOIN sections s ON co.uuid = s.course_offering_uuid
+
+INNER JOIN teachings t ON s.uuid = t.section_uuid
+
+INNER JOIN instructors ON t.instructor_id = instructors.id
+
+INNER JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+
+INNER JOIN subjects ON sm.subject_code = subjects.code
+
+WHERE subjects.abbreviation = 'STAT'
+
+GROUP BY instructors.id, instructors.name
+
+HAVING GPA_MEDIO IS NOT NULL
+
+ORDER BY GPA_MEDIO DESC
+
+LIMIT 1
+"
+
+dbGetQuery(conn, sql)
+```
+
+
+### Qual é a disciplina mais difícil?
+```{r}
+sql <- "SELECT courses.name AS DISCIPLINA,
+
+ROUND(AVG(
+(4.0*gd.a_count +
+3.5*gd.ab_count +
+3.0*gd.b_count +
+2.5*gd.bc_count +
+2.0*gd.c_count +
+1.0*gd.d_count +
+0.0*gd.f_count)*1.0 /
+
+(gd.a_count + gd.ab_count + gd.b_count +
+ gd.bc_count + gd.c_count + gd.d_count + gd.f_count)
+),3) AS GPA_MEDIO
+
+FROM grade_distributions gd
+
+INNER JOIN course_offerings co ON gd.course_offering_uuid = co.uuid
+
+INNER JOIN courses ON co.course_uuid = courses.uuid
+
+INNER JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+
+INNER JOIN subjects ON sm.subject_code = subjects.code
+
+WHERE subjects.abbreviation = 'STAT'
+
+GROUP BY courses.uuid, courses.name
+
+HAVING GPA_MEDIO IS NOT NULL
+
+ORDER BY GPA_MEDIO ASC
+
+LIMIT 1
+"
+
+dbGetQuery(conn, sql)
+```
+
+
+### Qual é a disciplina mais fácil?
+```{r}
+sql <- "SELECT courses.name AS DISCIPLINA,
+
+ROUND(AVG(
+(4.0*gd.a_count +
+3.5*gd.ab_count +
+3.0*gd.b_count +
+2.5*gd.bc_count +
+2.0*gd.c_count +
+1.0*gd.d_count +
+0.0*gd.f_count)*1.0 /
+
+(gd.a_count + gd.ab_count + gd.b_count +
+ gd.bc_count + gd.c_count + gd.d_count + gd.f_count)
+),3) AS GPA_MEDIO
+
+FROM grade_distributions gd
+
+INNER JOIN course_offerings co ON gd.course_offering_uuid = co.uuid
+
+INNER JOIN courses ON co.course_uuid = courses.uuid
+
+INNER JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+
+INNER JOIN subjects ON sm.subject_code = subjects.code
+
+WHERE subjects.abbreviation = 'STAT'
+
+GROUP BY courses.uuid, courses.name
+
+HAVING GPA_MEDIO IS NOT NULL
+
+ORDER BY GPA_MEDIO DESC
+
+LIMIT 1
+"
+
+dbGetQuery(conn, sql)
+```
+
+
+## 4. Desconecte do banco de dados.
+```{r}
+dbDisconnect(conn)
+```
+
+## Horario
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
