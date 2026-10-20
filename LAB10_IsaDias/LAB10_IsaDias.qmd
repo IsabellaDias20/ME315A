@@ -1,0 +1,113 @@
+---
+title: "Lab10_IsaDias"
+author: "Isabella Ferreira Dias"
+format: typst
+editor: source
+jupyter: python3
+---
+## Preparação
+
+```{python}
+import pandas as pd
+from plotnine import (
+    ggplot, aes, geom_point, geom_smooth, labs,
+    theme_minimal, theme, element_text, facet_wrap, facet_grid
+)
+
+diamonds = pd.read_csv("diamonds.csv.gz")
+
+print("Dimensões do conjunto:", diamonds.shape)
+diamonds.head()
+```
+
+## 1. Associação entre peso (`carat`) e preço (`price`)
+
+```{python}
+grafico1 = (
+    ggplot(diamonds, aes(x="carat", y="price"))
+    + geom_point(alpha=0.18, size=1)
+    + geom_smooth(method="lm", se=False, color="#7B2CBF", size=1)
+    + labs(
+        title="Relação entre peso e preço dos diamantes",
+        subtitle="Cada ponto representa um diamante; a curva resume a tendência",
+        x="Peso (quilates)",
+        y="Preço (USD)",
+        caption="Fonte: arquivo diamonds.csv.gz fornecido para o laboratório"
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5.5),
+        plot_title=element_text(size=14, weight="bold"),
+        axis_title=element_text(size=11)
+    )
+)
+grafico1
+```
+
+O gráfico indica uma associação positiva entre peso e preço: em geral, diamantes mais pesados custam mais. A nuvem de pontos fica mais espalhada para pesos maiores, mostrando que diamantes de peso semelhante podem ter preços diferentes. Para melhorar a leitura, usei transparência nos pontos para reduzir a sobreposição, títulos e rótulos claros, a unidade nos eixos e uma reta de tendência para destacar o padrão geral.
+
+## 2. A relação é a mesma para os diferentes cortes?
+
+```{python}
+grafico2 = (
+    ggplot(diamonds, aes(x="carat", y="price"))
+    + geom_point(alpha=0.15, size=0.8)
+    + geom_smooth(method="lm", se=False, color="#7B2CBF", size=0.8)
+    + facet_wrap("~cut", ncol=3)
+    + labs(
+        title="Relação entre peso e preço por qualidade de corte",
+        x="Peso (quilates)",
+        y="Preço (USD)"
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(10, 7),
+        plot_title=element_text(size=14, weight="bold"),
+        strip_text=element_text(size=10)
+    )
+)
+grafico2
+```
+
+A associação entre peso e preço é positiva nos diferentes tipos de corte, mas os padrões não são idênticos. A distribuição dos preços e a dispersão dos pontos variam entre as categorias. Isso sugere que o peso é importante para entender o preço, mas não é o único fator associado ao valor. A transparência dos pontos e os painéis separados permitem comparar os cortes sem sobrepor todas as observações em um único gráfico.
+
+## 3. Relação entre preço e peso para combinações de corte, cor e clareza
+
+Neste gráfico, cada painel corresponde a uma combinação de cor (`color`) e corte (`cut`), enquanto a cor dos pontos representa a clareza (`clarity`). A divisão em painéis facilita a comparação, embora a quantidade de grupos torne o gráfico mais carregado.
+
+```{python}
+grafico3 = (
+    ggplot(diamonds, aes(x="carat", y="price", color="clarity"))
+    + geom_point(alpha=0.45, size=0.8)
+    + facet_grid("color ~ cut")
+    + labs(
+        title="Relação entre peso e preço por corte, cor e clareza",
+        x="Peso (quilates)",
+        y="Preço (USD)",
+        color="Clareza",
+        caption="Cada painel corresponde a uma combinação de cor e corte."
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(12, 10),
+        plot_title=element_text(size=14, weight="bold"),
+        strip_text=element_text(size=8),
+        axis_text_x=element_text(size=7),
+        axis_text_y=element_text(size=7),
+        legend_position="bottom"
+    )
+)
+grafico3
+```
+
+Uma dificuldade é a grande quantidade de combinações: separar os dados por corte e cor cria muitos painéis, e as categorias de clareza precisam ser distinguidas pela legenda. Ainda assim, é possível observar a tendência geral de aumento do preço com o peso em diferentes grupos. A relação não é exatamente igual em todas as configurações, pois os preços e a dispersão variam entre diamantes de peso semelhante. Portanto, peso, corte, cor e clareza ajudam a descrever as diferenças de preço.
+
+## Horário de execução
+
+```{python}
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+data_hora = datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y às %H:%M:%S")
+data_hora
+```
